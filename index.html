@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+<title>Tennis Ranker</title>
+
+<!-- These three lines are what make "Add to Home Screen" open fullscreen
+     instead of inside Safari's browser chrome. -->
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Tennis Ranker" />
+
+<meta name="theme-color" content="#12172B" />
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: #12172B;
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+</style>
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap');
+
+#tr-app * { box-sizing: border-box; }
+#tr-app {
+  --ink: #12172B;
+  --ink-2: #1B2340;
+  --ink-3: #262F52;
+  --ball: #D7F24C;
+  --ball-dim: #A8B84A;
+  --chalk: #F3F5EF;
+  --chalk-dim: #A7AEC4;
+  --clay: #C1583C;
+  --grass: #5FA06A;
+  --line: rgba(243,245,239,0.10);
+
+  font-family: 'Inter', sans-serif;
+  background: var(--ink);
+  color: var(--chalk);
+  max-width: 420px;
+  margin: 0 auto;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+#tr-app .tr-screen {
+  flex: 1;
+  padding: 28px 20px 16px;
+  overflow-y: auto;
+}
+
+#tr-app .tr-eyebrow {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ball);
+  margin: 0 0 4px;
+}
+
+#tr-app h1.tr-title {
+  font-family: 'Oswald', sans-serif;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.01em;
+  font-size: 28px;
+  margin: 0 0 20px;
+  color: var(--chalk);
+}
+
+#tr-app .tr-card {
+  background: var(--ink-2);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 18px;
+  margin-bottom: 16px;
+}
+
+#tr-app label.tr-label {
+  display: block;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--chalk-dim);
+  margin-bottom: 8px;
+}
+
+#tr-app select.tr-select {
+  width: 100%;
+  background: var(--ink-3);
+  border: 1px solid var(--line);
+  color: var(--chalk);
+  font-family: 'Inter', sans-serif;
+  font-size: 15px;
+  font-weight: 500;
+  padding: 12px 14px;
+  border-radius: 10px;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+#tr-app .tr-add-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+#tr-app input.tr-text {
+  flex: 1;
+  background: var(--ink-3);
+  border: 1px solid var(--line);
+  color: var(--chalk);
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  padding: 11px 12px;
+  border-radius: 10px;
+}
+#tr-app input.tr-text::placeholder { color: var(--chalk-dim); }
+
+#tr-app button.tr-btn-ghost {
+  background: transparent;
+  border: 1px solid var(--ball-dim);
+  color: var(--ball);
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
+  font-size: 13px;
+  padding: 0 16px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+#tr-app .tr-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+#tr-app .tr-chip {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 9px 13px;
+  border-radius: 20px;
+  border: 1px solid var(--line);
+  background: var(--ink-3);
+  color: var(--chalk-dim);
+  cursor: pointer;
+  user-select: none;
+}
+#tr-app .tr-chip.active {
+  background: var(--ball);
+  border-color: var(--ball);
+  color: var(--ink);
+}
+#tr-app .tr-format-note {
+  font-size: 12px;
+  color: var(--chalk-dim);
+  margin-top: 8px;
+}
+
+#tr-app .tr-set-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+#tr-app .tr-set-row .tr-set-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  color: var(--chalk-dim);
+  width: 44px;
+  flex-shrink: 0;
+}
+#tr-app .tr-score-box {
+  width: 56px;
+  height: 52px;
+  background: var(--ink-3);
+  border: 1px solid var(--line);
+  border-bottom: 2px solid var(--ball-dim);
+  border-radius: 10px;
+  color: var(--chalk);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 22px;
+  font-weight: 600;
+  text-align: center;
+}
+#tr-app .tr-score-box:focus {
+  outline: none;
+  border-bottom: 2px solid var(--ball);
+}
+#tr-app .tr-vs {
+  font-family: 'Oswald', sans-serif;
+  color: var(--chalk-dim);
+  font-size: 13px;
+}
+#tr-app .tr-remove-set {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: var(--chalk-dim);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+
+#tr-app button.tr-add-set {
+  background: none;
+  border: 1px dashed var(--line);
+  color: var(--chalk-dim);
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 10px;
+  border-radius: 10px;
+  width: 100%;
+  cursor: pointer;
+}
+
+#tr-app button.tr-submit {
+  width: 100%;
+  background: var(--ball);
+  color: var(--ink);
+  border: none;
+  font-family: 'Oswald', sans-serif;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  font-size: 15px;
+  padding: 16px;
+  border-radius: 12px;
+  cursor: pointer;
+  margin-top: 4px;
+}
+#tr-app button.tr-submit:active { transform: scale(0.98); }
+
+#tr-app .tr-error {
+  color: var(--clay);
+  font-size: 13px;
+  margin-top: 6px;
+  font-weight: 500;
+}
+
+#tr-app .tr-result {
+  border-radius: 16px;
+  padding: 20px;
+  background: linear-gradient(180deg, var(--ink-3), var(--ink-2));
+  border: 1px solid var(--ball-dim);
+}
+#tr-app .tr-result-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+}
+#tr-app .tr-result-row:last-child { border-bottom: none; }
+#tr-app .tr-result-name { font-weight: 600; font-size: 15px; }
+#tr-app .tr-result-delta {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 14px;
+  font-weight: 600;
+}
+#tr-app .tr-up { color: var(--grass); }
+#tr-app .tr-down { color: var(--clay); }
+#tr-app .tr-rating-arrow {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 13px;
+  color: var(--chalk-dim);
+}
+
+#tr-app .tr-rank-list { list-style: none; margin: 0; padding: 0; }
+#tr-app .tr-rank-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 4px;
+  border-bottom: 1px solid var(--line);
+}
+#tr-app .tr-rank-item:last-child { border-bottom: none; }
+#tr-app .tr-rank-num {
+  font-family: 'Oswald', sans-serif;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--ball-dim);
+  width: 28px;
+}
+#tr-app .tr-rank-item.tr-me .tr-rank-num { color: var(--ball); }
+#tr-app .tr-rank-info { flex: 1; }
+#tr-app .tr-rank-name { font-weight: 600; font-size: 15px; }
+#tr-app .tr-rank-name .tr-you-tag {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9.5px;
+  color: var(--ink);
+  background: var(--ball);
+  padding: 2px 6px;
+  border-radius: 6px;
+  margin-left: 6px;
+  vertical-align: middle;
+  letter-spacing: 0.05em;
+}
+#tr-app .tr-rank-sub {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  color: var(--chalk-dim);
+  margin-top: 2px;
+}
+#tr-app .tr-rank-rating {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+#tr-app .tr-empty {
+  text-align: center;
+  color: var(--chalk-dim);
+  font-size: 14px;
+  padding: 40px 20px;
+}
+
+#tr-app .tr-tabbar {
+  display: flex;
+  border-top: 1px solid var(--line);
+  background: var(--ink-2);
+  padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
+}
+#tr-app .tr-tab {
+  flex: 1;
+  background: none;
+  border: none;
+  color: var(--chalk-dim);
+  font-family: 'Inter', sans-serif;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 6px;
+  cursor: pointer;
+}
+#tr-app .tr-tab.active { color: var(--ball); }
+#tr-app .tr-tab .tr-tab-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: currentColor;
+  opacity: 0;
+}
+#tr-app .tr-tab.active .tr-tab-dot { opacity: 1; }
+
+#tr-app .tr-reset-link {
+  display: block;
+  text-align: center;
+  color: var(--chalk-dim);
+  font-size: 11.5px;
+  margin-top: 18px;
+  text-decoration: underline;
+  cursor: pointer;
+  background: none; border: none;
+  font-family: 'Inter', sans-serif;
+}
+
+#tr-app .tr-hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<div id="tr-app">
+  <div class="tr-screen" id="tr-screen-match">
+    <p class="tr-eyebrow">New Match</p>
+    <h1 class="tr-title">Log a Score</h1>
+
+    <div class="tr-card">
+      <label class="tr-label">Opponent</label>
+      <select class="tr-select" id="tr-opponent-select"></select>
+      <div class="tr-add-row">
+        <input class="tr-text" id="tr-new-opponent" placeholder="Or add a new opponent" />
+        <button class="tr-btn-ghost" id="tr-add-opponent-btn">Add</button>
+      </div>
+    </div>
+
+    <div class="tr-card">
+      <label class="tr-label">Format</label>
+      <div class="tr-chips" id="tr-format-chips"></div>
+      <p class="tr-format-note" id="tr-format-note"></p>
+    </div>
+
+    <div class="tr-card">
+      <label class="tr-label" id="tr-score-label">Score</label>
+      <div id="tr-set-rows"></div>
+      <button class="tr-add-set tr-hidden" id="tr-add-set-btn">+ Add another set</button>
+    </div>
+
+    <p class="tr-error tr-hidden" id="tr-match-error"></p>
+    <button class="tr-submit" id="tr-submit-btn">Save Match</button>
+    <button class="tr-reset-link tr-hidden" id="tr-edit-last-btn" style="margin-top:14px;"></button>
+
+    <div class="tr-result tr-hidden" id="tr-result" style="margin-top:18px;"></div>
+  </div>
+
+  <div class="tr-screen tr-hidden" id="tr-screen-rankings">
+    <p class="tr-eyebrow">Standings</p>
+    <h1 class="tr-title">Rankings</h1>
+    <ul class="tr-rank-list" id="tr-rank-list"></ul>
+    <button class="tr-reset-link" id="tr-reset-btn">Reset all demo data</button>
+  </div>
+
+  <div class="tr-tabbar">
+    <button class="tr-tab active" data-tab="match">
+      <span class="tr-tab-dot"></span>New Match
+    </button>
+    <button class="tr-tab" data-tab="rankings">
+      <span class="tr-tab-dot"></span>Rankings
+    </button>
+  </div>
+</div>
+
+<script>
+(function() {
+  const ME_ID = 'me';
+
+  // Tiebreak formats get a fixedMultiplier: since a breaker only ever
+  // decides the equivalent of one game, the internal point margin
+  // (10-8 vs 7-3) shouldn't swing the rating bonus much. Both are treated
+  // like a minimal, just-barely-won margin — similar to a close 7-6 set.
+  const TIEBREAK_FIXED_MULTIPLIER = 1.05;
+
+  const FORMATS = {
+    set5:   { label: '5 Sets',        type: 'sets',   maxEntries: 5, note: 'Best of 5 — enter each set played.' },
+    set3:   { label: '3 Sets',        type: 'sets',   maxEntries: 3, note: 'Best of 3 — enter each set played.' },
+    single: { label: 'Single Set',    type: 'sets',   maxEntries: 1, note: 'One set, first to 6 (win by 2).' },
+    race4:  { label: 'Race to 4',     type: 'sets',   maxEntries: 1, note: 'First to 4 games — the actual gap sets the bonus.' },
+    race3:  { label: 'Race to 3',     type: 'sets',   maxEntries: 1, note: 'First to 3 games — the actual gap sets the bonus.' },
+    race2:  { label: 'Race to 2',     type: 'sets',   maxEntries: 1, note: 'First to 2 games — the actual gap sets the bonus.' },
+    tb7:    { label: '7-Pt Breaker',  type: 'points', maxEntries: 1, note: 'First to 7 points — treated as a minimal-margin win.',
+              fixedMultiplier: TIEBREAK_FIXED_MULTIPLIER },
+    tb10:   { label: '10-Pt Breaker', type: 'points', maxEntries: 1, note: 'First to 10 points — treated as a minimal-margin win.',
+              fixedMultiplier: TIEBREAK_FIXED_MULTIPLIER }
+  };
+
+  let players = [];
+  let selectedFormat = 'set3';
+  let setRows = 1;
+  let currentTab = 'match';
+
+  // ---------- Storage ----------
+  // Uses localStorage, since this file runs standalone in your browser
+  // (not inside Claude.ai's artifact viewer, which uses a different API).
+  const STORAGE_KEY = 'tennis-ranker-players';
+  const LAST_MATCH_KEY = 'tennis-ranker-last-match';
+
+  let lastMatch = null; // { oppId, format, entries, meBefore, oppBefore }
+
+  function loadLastMatch() {
+    try {
+      const raw = localStorage.getItem(LAST_MATCH_KEY);
+      lastMatch = raw ? JSON.parse(raw) : null;
+    } catch (e) {
+      lastMatch = null;
+    }
+  }
+
+  function saveLastMatch() {
+    try {
+      if (lastMatch) {
+        localStorage.setItem(LAST_MATCH_KEY, JSON.stringify(lastMatch));
+      } else {
+        localStorage.removeItem(LAST_MATCH_KEY);
+      }
+    } catch (e) {
+      console.error('Could not save last match', e);
+    }
+  }
+
+  async function loadPlayers() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      players = raw ? JSON.parse(raw) : null;
+    } catch (e) {
+      players = null;
+    }
+    if (!players || !players.length) {
+      players = [{ id: ME_ID, name: 'Me', rating: 1200, matchesPlayed: 0 }];
+      await savePlayers();
+    }
+  }
+
+  async function savePlayers() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(players));
+    } catch (e) {
+      console.error('Could not save players', e);
+      showError('Could not save — your browser may be blocking local storage for this file.');
+    }
+  }
+
+  // ---------- Elo logic ----------
+  function kFactor(matchesPlayed) {
+    if (matchesPlayed < 10) return 40;
+    if (matchesPlayed < 30) return 24;
+    return 16;
+  }
+
+  function expectedScore(ratingA, ratingB) {
+    return 1 / (1 + Math.pow(10, (ratingB - ratingA) / 400));
+  }
+
+  function marginMultiplier(entries) {
+    let totalA = 0, totalB = 0;
+    entries.forEach(e => { totalA += e.a; totalB += e.b; });
+    const total = totalA + totalB;
+    if (total === 0) return 1;
+    const ratio = Math.abs(totalA - totalB) / total;
+    return Math.min(1 + ratio * 0.5, 1.5);
+  }
+
+  function computeUpdatedRatings(ratingA, ratingB, matchesA, matchesB, entries, format) {
+    const setsWonA = entries.filter(e => e.a > e.b).length;
+    const setsWonB = entries.filter(e => e.b > e.a).length;
+    const winnerIsA = setsWonA > setsWonB;
+
+    const expA = expectedScore(ratingA, ratingB);
+    const expB = 1 - expA;
+    const actA = winnerIsA ? 1 : 0;
+    const actB = winnerIsA ? 0 : 1;
+
+    // Tiebreak formats use a fixed minimal-margin multiplier regardless
+    // of the internal point score; everything else scales with the
+    // actual game gap entered.
+    const mult = (format && format.fixedMultiplier != null)
+      ? format.fixedMultiplier
+      : marginMultiplier(entries);
+
+    const kA = kFactor(matchesA);
+    const kB = kFactor(matchesB);
+
+    const newA = Math.round(ratingA + kA * (actA - expA) * mult);
+    const newB = Math.round(ratingB + kB * (actB - expB) * mult);
+
+    return { newA, newB, winnerIsA, mult };
+  }
+
+  // ---------- Rendering: New Match screen ----------
+  function renderOpponentSelect() {
+    const sel = document.getElementById('tr-opponent-select');
+    const opponents = players.filter(p => p.id !== ME_ID);
+    if (!opponents.length) {
+      sel.innerHTML = '<option value="">Add an opponent below to begin</option>';
+      return;
+    }
+    sel.innerHTML = opponents.map(p => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('');
+  }
+
+  function renderFormatChips() {
+    const wrap = document.getElementById('tr-format-chips');
+    wrap.innerHTML = Object.entries(FORMATS).map(([key, f]) =>
+      `<div class="tr-chip ${key === selectedFormat ? 'active' : ''}" data-format="${key}">${f.label}</div>`
+    ).join('');
+    document.getElementById('tr-format-note').textContent = FORMATS[selectedFormat].note;
+    wrap.querySelectorAll('.tr-chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        selectedFormat = chip.dataset.format;
+        setRows = 1;
+        renderFormatChips();
+        renderSetRows();
+      });
+    });
+  }
+
+  function renderSetRows() {
+    const format = FORMATS[selectedFormat];
+    const container = document.getElementById('tr-set-rows');
+    const addBtn = document.getElementById('tr-add-set-btn');
+    const label = document.getElementById('tr-score-label');
+
+    label.textContent = format.type === 'points' ? 'Tiebreak Points' : 'Set Scores';
+
+    let rows = '';
+    for (let i = 0; i < setRows; i++) {
+      const rowLabel = format.type === 'points' ? 'Pts' : `Set ${i + 1}`;
+      rows += `
+        <div class="tr-set-row" data-row="${i}">
+          <span class="tr-set-label">${rowLabel}</span>
+          <input class="tr-score-box" type="number" min="0" inputmode="numeric" data-side="a" data-row="${i}" placeholder="—" />
+          <span class="tr-vs">–</span>
+          <input class="tr-score-box" type="number" min="0" inputmode="numeric" data-side="b" data-row="${i}" placeholder="—" />
+          ${i > 0 ? `<button class="tr-remove-set" data-remove="${i}">&times;</button>` : ''}
+        </div>`;
+    }
+    container.innerHTML = rows;
+
+    container.querySelectorAll('[data-remove]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        setRows = Math.max(1, setRows - 1);
+        renderSetRows();
+      });
+    });
+
+    if (format.type === 'sets' && setRows < format.maxEntries) {
+      addBtn.classList.remove('tr-hidden');
+      addBtn.textContent = `+ Add another set (${setRows}/${format.maxEntries})`;
+    } else {
+      addBtn.classList.add('tr-hidden');
+    }
+  }
+
+  function escapeHtml(str) {
+    const d = document.createElement('div');
+    d.textContent = str;
+    return d.innerHTML;
+  }
+
+  function showError(msg) {
+    const el = document.getElementById('tr-match-error');
+    el.textContent = msg;
+    el.classList.remove('tr-hidden');
+  }
+  function clearError() {
+    document.getElementById('tr-match-error').classList.add('tr-hidden');
+  }
+
+  async function handleAddOpponent() {
+    const input = document.getElementById('tr-new-opponent');
+    const name = input.value.trim();
+    if (!name) return;
+    const id = 'p_' + Date.now();
+    players.push({ id, name, rating: 1200, matchesPlayed: 0 });
+    await savePlayers();
+    input.value = '';
+    renderOpponentSelect();
+    document.getElementById('tr-opponent-select').value = id;
+  }
+
+  async function handleSubmitMatch() {
+    clearError();
+    document.getElementById('tr-result').classList.add('tr-hidden');
+
+    const oppId = document.getElementById('tr-opponent-select').value;
+    if (!oppId) { showError('Add or select an opponent first.'); return; }
+
+    const me = players.find(p => p.id === ME_ID);
+    const opp = players.find(p => p.id === oppId);
+
+    const rows = document.querySelectorAll('#tr-set-rows .tr-set-row');
+    const entries = [];
+    for (const row of rows) {
+      const aVal = row.querySelector('[data-side="a"]').value;
+      const bVal = row.querySelector('[data-side="b"]').value;
+      if (aVal === '' || bVal === '') { showError('Fill in every score field.'); return; }
+      const a = parseInt(aVal, 10), b = parseInt(bVal, 10);
+      if (a === b) { showError('Each set/breaker needs a winner — scores cannot tie.'); return; }
+      entries.push({ a, b });
+    }
+    if (!entries.length) { showError('Enter at least one score.'); return; }
+
+    // Snapshot ratings/matches BEFORE this match, so it can be edited later.
+    const meBefore = { rating: me.rating, matchesPlayed: me.matchesPlayed };
+    const oppBefore = { rating: opp.rating, matchesPlayed: opp.matchesPlayed };
+
+    const format = FORMATS[selectedFormat];
+    const { newA, newB, winnerIsA, mult } = computeUpdatedRatings(
+      me.rating, opp.rating, me.matchesPlayed, opp.matchesPlayed, entries, format
+    );
+
+    const meDelta = newA - me.rating;
+    const oppDelta = newB - opp.rating;
+
+    me.rating = newA; me.matchesPlayed += 1;
+    opp.rating = newB; opp.matchesPlayed += 1;
+    await savePlayers();
+
+    lastMatch = {
+      oppId,
+      oppName: opp.name,
+      format: selectedFormat,
+      entries,
+      meBefore,
+      oppBefore
+    };
+    saveLastMatch();
+    renderEditLastLink();
+
+    renderResult(me, opp, meDelta, oppDelta, winnerIsA, mult);
+
+    setRows = 1;
+    renderSetRows();
+  }
+
+  // Restores both players to their pre-match ratings and re-opens the
+  // form pre-filled with the last match's opponent, format, and scores,
+  // so the user can correct a typo and resubmit.
+  async function handleEditLastMatch() {
+    if (!lastMatch) return;
+
+    const me = players.find(p => p.id === ME_ID);
+    const opp = players.find(p => p.id === lastMatch.oppId);
+    if (!me || !opp) { showError('That opponent no longer exists.'); return; }
+
+    me.rating = lastMatch.meBefore.rating;
+    me.matchesPlayed = lastMatch.meBefore.matchesPlayed;
+    opp.rating = lastMatch.oppBefore.rating;
+    opp.matchesPlayed = lastMatch.oppBefore.matchesPlayed;
+    await savePlayers();
+
+    document.getElementById('tr-result').classList.add('tr-hidden');
+    clearError();
+
+    document.getElementById('tr-opponent-select').value = lastMatch.oppId;
+    selectedFormat = lastMatch.format;
+    renderFormatChips();
+
+    setRows = lastMatch.entries.length;
+    renderSetRows();
+    const rows = document.querySelectorAll('#tr-set-rows .tr-set-row');
+    rows.forEach((row, i) => {
+      row.querySelector('[data-side="a"]').value = lastMatch.entries[i].a;
+      row.querySelector('[data-side="b"]').value = lastMatch.entries[i].b;
+    });
+
+    // This match is now "unsaved" again until Save Match is pressed —
+    // clear the pointer so a stray tap on Edit doesn't restore it twice.
+    lastMatch = null;
+    saveLastMatch();
+    renderEditLastLink();
+
+    if (currentTab !== 'match') switchTab('match');
+    renderRankings();
+  }
+
+  function renderEditLastLink() {
+    const btn = document.getElementById('tr-edit-last-btn');
+    if (!lastMatch) {
+      btn.classList.add('tr-hidden');
+      return;
+    }
+    btn.textContent = `Edit last match — vs ${lastMatch.oppName}`;
+    btn.classList.remove('tr-hidden');
+  }
+
+  function renderResult(me, opp, meDelta, oppDelta, winnerIsA, mult) {
+    const box = document.getElementById('tr-result');
+    const fmt = (d) => (d >= 0 ? `+${d}` : `${d}`);
+    box.innerHTML = `
+      <p class="tr-eyebrow" style="margin-bottom:10px;">${winnerIsA ? 'You won' : escapeHtml(opp.name) + ' won'} · margin ×${mult.toFixed(2)}</p>
+      <div class="tr-result-row">
+        <span class="tr-result-name">Me</span>
+        <span class="tr-rating-arrow">${me.rating - meDelta} → ${me.rating}</span>
+        <span class="tr-result-delta ${meDelta >= 0 ? 'tr-up' : 'tr-down'}">${fmt(meDelta)}</span>
+      </div>
+      <div class="tr-result-row">
+        <span class="tr-result-name">${escapeHtml(opp.name)}</span>
+        <span class="tr-rating-arrow">${opp.rating - oppDelta} → ${opp.rating}</span>
+        <span class="tr-result-delta ${oppDelta >= 0 ? 'tr-up' : 'tr-down'}">${fmt(oppDelta)}</span>
+      </div>
+    `;
+    box.classList.remove('tr-hidden');
+  }
+
+  // ---------- Rendering: Rankings screen ----------
+  function renderRankings() {
+    const list = document.getElementById('tr-rank-list');
+    if (players.length <= 1) {
+      list.innerHTML = '<div class="tr-empty">No matches yet. Log one to start building the rankings.</div>';
+      return;
+    }
+    const sorted = [...players].sort((a, b) => b.rating - a.rating);
+    list.innerHTML = sorted.map((p, i) => `
+      <li class="tr-rank-item ${p.id === ME_ID ? 'tr-me' : ''}">
+        <span class="tr-rank-num">${i + 1}</span>
+        <div class="tr-rank-info">
+          <div class="tr-rank-name">${escapeHtml(p.name)}${p.id === ME_ID ? '<span class="tr-you-tag">You</span>' : ''}</div>
+          <div class="tr-rank-sub">${p.matchesPlayed} match${p.matchesPlayed === 1 ? '' : 'es'} played</div>
+        </div>
+        <span class="tr-rank-rating">${p.rating}</span>
+      </li>
+    `).join('');
+  }
+
+  // ---------- Tabs ----------
+  function switchTab(tab) {
+    currentTab = tab;
+    document.getElementById('tr-screen-match').classList.toggle('tr-hidden', tab !== 'match');
+    document.getElementById('tr-screen-rankings').classList.toggle('tr-hidden', tab !== 'rankings');
+    document.querySelectorAll('#tr-app .tr-tab').forEach(t => {
+      t.classList.toggle('active', t.dataset.tab === tab);
+    });
+    if (tab === 'rankings') renderRankings();
+  }
+
+  async function handleReset() {
+    players = [{ id: ME_ID, name: 'Me', rating: 1200, matchesPlayed: 0 }];
+    await savePlayers();
+    lastMatch = null;
+    saveLastMatch();
+    renderEditLastLink();
+    renderOpponentSelect();
+    renderRankings();
+  }
+
+  // ---------- Init ----------
+  async function init() {
+    await loadPlayers();
+    loadLastMatch();
+    renderOpponentSelect();
+    renderFormatChips();
+    renderSetRows();
+    renderRankings();
+    renderEditLastLink();
+
+    document.getElementById('tr-add-opponent-btn').addEventListener('click', handleAddOpponent);
+    document.getElementById('tr-new-opponent').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') handleAddOpponent();
+    });
+    document.getElementById('tr-add-set-btn').addEventListener('click', () => {
+      const format = FORMATS[selectedFormat];
+      if (setRows < format.maxEntries) { setRows++; renderSetRows(); }
+    });
+    document.getElementById('tr-submit-btn').addEventListener('click', handleSubmitMatch);
+    document.getElementById('tr-edit-last-btn').addEventListener('click', handleEditLastMatch);
+    document.getElementById('tr-reset-btn').addEventListener('click', handleReset);
+    document.querySelectorAll('#tr-app .tr-tab').forEach(t => {
+      t.addEventListener('click', () => switchTab(t.dataset.tab));
+    });
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>
