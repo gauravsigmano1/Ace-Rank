@@ -380,10 +380,31 @@
     <h1 class="tr-title">Log a Score</h1>
 
     <div class="tr-card">
-      <label class="tr-label">Opponent</label>
-      <select class="tr-select" id="tr-opponent-select"></select>
+      <label class="tr-label">Match Type</label>
+      <div class="tr-chips" id="tr-matchtype-chips">
+        <div class="tr-chip active" data-matchtype="singles">Singles</div>
+        <div class="tr-chip" data-matchtype="doubles">Doubles</div>
+      </div>
+    </div>
+
+    <div class="tr-card">
+      <label class="tr-label" id="tr-players-label">Opponent</label>
+
+      <div id="tr-singles-block">
+        <select class="tr-select" id="tr-opponent-select"></select>
+      </div>
+
+      <div id="tr-doubles-block" class="tr-hidden">
+        <label class="tr-label" style="margin-top:0;">Your Partner</label>
+        <select class="tr-select" id="tr-partner-select"></select>
+        <label class="tr-label" style="margin-top:12px;">Opponent 1</label>
+        <select class="tr-select" id="tr-opp1-select"></select>
+        <label class="tr-label" style="margin-top:12px;">Opponent 2</label>
+        <select class="tr-select" id="tr-opp2-select"></select>
+      </div>
+
       <div class="tr-add-row">
-        <input class="tr-text" id="tr-new-opponent" placeholder="Or add a new opponent" />
+        <input class="tr-text" id="tr-new-opponent" placeholder="Add a new player" />
         <button class="tr-btn-ghost" id="tr-add-opponent-btn">Add</button>
       </div>
     </div>
@@ -451,6 +472,7 @@
   let selectedFormat = 'set3';
   let setRows = 1;
   let currentTab = 'match';
+  let matchType = 'singles'; // 'singles' | 'doubles'
 
   // ---------- Storage ----------
   // Uses localStorage, since this file runs standalone in your browser
@@ -523,41 +545,72 @@
     return Math.min(1 + ratio * 0.5, 1.5);
   }
 
-  function computeUpdatedRatings(ratingA, ratingB, matchesA, matchesB, entries, format) {
+  function average(nums) {
+    return nums.reduce((s, n) => s + n, 0) / nums.length;
+  }
+
+  // Works for both singles (teamAIds/teamBIds each length 1) and doubles
+  // (length 2). Rating change is computed once for the match using each
+  // team's average rating, then split equally among that team's players —
+  // so in doubles, each teammate gets half the team's total swing.
+  function computeTeamRatings(teamAPlayers, teamBPlayers, entries, format) {
     const setsWonA = entries.filter(e => e.a > e.b).length;
     const setsWonB = entries.filter(e => e.b > e.a).length;
     const winnerIsA = setsWonA > setsWonB;
 
-    const expA = expectedScore(ratingA, ratingB);
+    const avgRatingA = average(teamAPlayers.map(p => p.rating));
+    const avgRatingB = average(teamBPlayers.map(p => p.rating));
+    const avgMatchesA = average(teamAPlayers.map(p => p.matchesPlayed));
+    const avgMatchesB = average(teamBPlayers.map(p => p.matchesPlayed));
+
+    const expA = expectedScore(avgRatingA, avgRatingB);
     const expB = 1 - expA;
     const actA = winnerIsA ? 1 : 0;
     const actB = winnerIsA ? 0 : 1;
 
-    // Tiebreak formats use a fixed minimal-margin multiplier regardless
-    // of the internal point score; everything else scales with the
-    // actual game gap entered.
     const mult = (format && format.fixedMultiplier != null)
       ? format.fixedMultiplier
       : marginMultiplier(entries);
 
-    const kA = kFactor(matchesA);
-    const kB = kFactor(matchesB);
+    const kA = kFactor(avgMatchesA);
+    const kB = kFactor(avgMatchesB);
 
-    const newA = Math.round(ratingA + kA * (actA - expA) * mult);
-    const newB = Math.round(ratingB + kB * (actB - expB) * mult);
+    const teamDeltaA = kA * (actA - expA) * mult;
+    const teamDeltaB = kB * (actB - expB) * mult;
 
-    return { newA, newB, winnerIsA, mult };
+    const perPlayerDeltaA = Math.round(teamDeltaA / teamAPlayers.length);
+    const perPlayerDeltaB = Math.round(teamDeltaB / teamBPlayers.length);
+
+    return { perPlayerDeltaA, perPlayerDeltaB, winnerIsA, mult };
   }
 
   // ---------- Rendering: New Match screen ----------
-  function renderOpponentSelect() {
-    const sel = document.getElementById('tr-opponent-select');
-    const opponents = players.filter(p => p.id !== ME_ID);
+  function fillPlayerSelect(selectEl, opponents) {
     if (!opponents.length) {
-      sel.innerHTML = '<option value="">Add an opponent below to begin</option>';
+      selectEl.innerHTML = '<option value="">Add a player below to begin</option>';
       return;
     }
-    sel.innerHTML = opponents.map(p => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('');
+    const prevValue = selectEl.value;
+    selectEl.innerHTML = opponents.map(p => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('');
+    if (opponents.some(p => p.id === prevValue)) selectEl.value = prevValue;
+  }
+
+  function renderPlayerSelects() {
+    const opponents = players.filter(p => p.id !== ME_ID);
+    fillPlayerSelect(document.getElementById('tr-opponent-select'), opponents);
+    fillPlayerSelect(document.getElementById('tr-partner-select'), opponents);
+    fillPlayerSelect(document.getElementById('tr-opp1-select'), opponents);
+    fillPlayerSelect(document.getElementById('tr-opp2-select'), opponents);
+  }
+
+  function renderMatchTypeChips() {
+    document.querySelectorAll('#tr-matchtype-chips .tr-chip').forEach(chip => {
+      chip.classList.toggle('active', chip.dataset.matchtype === matchType);
+    });
+    const isDoubles = matchType === 'doubles';
+    document.getElementById('tr-singles-block').classList.toggle('tr-hidden', isDoubles);
+    document.getElementById('tr-doubles-block').classList.toggle('tr-hidden', !isDoubles);
+    document.getElementById('tr-players-label').textContent = isDoubles ? 'Players' : 'Opponent';
   }
 
   function renderFormatChips() {
@@ -636,85 +689,130 @@
     players.push({ id, name, rating: 1200, matchesPlayed: 0 });
     await savePlayers();
     input.value = '';
-    renderOpponentSelect();
-    document.getElementById('tr-opponent-select').value = id;
+    renderPlayerSelects();
+  }
+
+  function gatherEntries() {
+    const rows = document.querySelectorAll('#tr-set-rows .tr-set-row');
+    const entries = [];
+    for (const row of rows) {
+      const aVal = row.querySelector('[data-side="a"]').value;
+      const bVal = row.querySelector('[data-side="b"]').value;
+      if (aVal === '' || bVal === '') return { error: 'Fill in every score field.' };
+      const a = parseInt(aVal, 10), b = parseInt(bVal, 10);
+      if (a === b) return { error: 'Each set/breaker needs a winner — scores cannot tie.' };
+      entries.push({ a, b });
+    }
+    if (!entries.length) return { error: 'Enter at least one score.' };
+    return { entries };
+  }
+
+  // Returns { teamAIds, teamBIds } or { error } depending on match type
+  // and what's currently selected in the form.
+  function gatherTeams() {
+    if (matchType === 'singles') {
+      const oppId = document.getElementById('tr-opponent-select').value;
+      if (!oppId) return { error: 'Add or select an opponent first.' };
+      return { teamAIds: [ME_ID], teamBIds: [oppId] };
+    }
+    const partnerId = document.getElementById('tr-partner-select').value;
+    const opp1Id = document.getElementById('tr-opp1-select').value;
+    const opp2Id = document.getElementById('tr-opp2-select').value;
+    if (!partnerId || !opp1Id || !opp2Id) {
+      return { error: 'Select your partner and both opponents.' };
+    }
+    const ids = [partnerId, opp1Id, opp2Id];
+    if (new Set(ids).size !== ids.length) {
+      return { error: 'Partner and opponents must all be different people.' };
+    }
+    return { teamAIds: [ME_ID, partnerId], teamBIds: [opp1Id, opp2Id] };
   }
 
   async function handleSubmitMatch() {
     clearError();
     document.getElementById('tr-result').classList.add('tr-hidden');
 
-    const oppId = document.getElementById('tr-opponent-select').value;
-    if (!oppId) { showError('Add or select an opponent first.'); return; }
+    const teamsResult = gatherTeams();
+    if (teamsResult.error) { showError(teamsResult.error); return; }
+    const { teamAIds, teamBIds } = teamsResult;
 
-    const me = players.find(p => p.id === ME_ID);
-    const opp = players.find(p => p.id === oppId);
+    const entriesResult = gatherEntries();
+    if (entriesResult.error) { showError(entriesResult.error); return; }
+    const { entries } = entriesResult;
 
-    const rows = document.querySelectorAll('#tr-set-rows .tr-set-row');
-    const entries = [];
-    for (const row of rows) {
-      const aVal = row.querySelector('[data-side="a"]').value;
-      const bVal = row.querySelector('[data-side="b"]').value;
-      if (aVal === '' || bVal === '') { showError('Fill in every score field.'); return; }
-      const a = parseInt(aVal, 10), b = parseInt(bVal, 10);
-      if (a === b) { showError('Each set/breaker needs a winner — scores cannot tie.'); return; }
-      entries.push({ a, b });
-    }
-    if (!entries.length) { showError('Enter at least one score.'); return; }
+    const allIds = [...teamAIds, ...teamBIds];
+    const allPlayers = allIds.map(id => players.find(p => p.id === id));
+    if (allPlayers.some(p => !p)) { showError('One of the selected players no longer exists.'); return; }
 
-    // Snapshot ratings/matches BEFORE this match, so it can be edited later.
-    const meBefore = { rating: me.rating, matchesPlayed: me.matchesPlayed };
-    const oppBefore = { rating: opp.rating, matchesPlayed: opp.matchesPlayed };
+    // Snapshot before-state for every player involved, so the match can be edited later.
+    const before = {};
+    allPlayers.forEach(p => { before[p.id] = { rating: p.rating, matchesPlayed: p.matchesPlayed }; });
+
+    const teamAPlayers = teamAIds.map(id => players.find(p => p.id === id));
+    const teamBPlayers = teamBIds.map(id => players.find(p => p.id === id));
 
     const format = FORMATS[selectedFormat];
-    const { newA, newB, winnerIsA, mult } = computeUpdatedRatings(
-      me.rating, opp.rating, me.matchesPlayed, opp.matchesPlayed, entries, format
-    );
+    const { perPlayerDeltaA, perPlayerDeltaB, winnerIsA, mult } =
+      computeTeamRatings(teamAPlayers, teamBPlayers, entries, format);
 
-    const meDelta = newA - me.rating;
-    const oppDelta = newB - opp.rating;
-
-    me.rating = newA; me.matchesPlayed += 1;
-    opp.rating = newB; opp.matchesPlayed += 1;
+    teamAPlayers.forEach(p => { p.rating += perPlayerDeltaA; p.matchesPlayed += 1; });
+    teamBPlayers.forEach(p => { p.rating += perPlayerDeltaB; p.matchesPlayed += 1; });
     await savePlayers();
 
+    const label = matchType === 'doubles'
+      ? `${teamAPlayers[1].name} & you vs ${teamBPlayers[0].name} & ${teamBPlayers[1].name}`
+      : `vs ${teamBPlayers[0].name}`;
+
     lastMatch = {
-      oppId,
-      oppName: opp.name,
+      matchType,
+      teamAIds,
+      teamBIds,
       format: selectedFormat,
       entries,
-      meBefore,
-      oppBefore
+      before,
+      label
     };
     saveLastMatch();
     renderEditLastLink();
 
-    renderResult(me, opp, meDelta, oppDelta, winnerIsA, mult);
+    renderResult(teamAIds, teamBIds, perPlayerDeltaA, perPlayerDeltaB, winnerIsA, mult);
 
     setRows = 1;
     renderSetRows();
   }
 
-  // Restores both players to their pre-match ratings and re-opens the
-  // form pre-filled with the last match's opponent, format, and scores,
-  // so the user can correct a typo and resubmit.
+  // Restores every involved player to their pre-match ratings and re-opens
+  // the form pre-filled with the last match's type, players, format, and
+  // scores, so the user can correct a mistake and resubmit.
   async function handleEditLastMatch() {
     if (!lastMatch) return;
 
-    const me = players.find(p => p.id === ME_ID);
-    const opp = players.find(p => p.id === lastMatch.oppId);
-    if (!me || !opp) { showError('That opponent no longer exists.'); return; }
+    const allIds = [...lastMatch.teamAIds, ...lastMatch.teamBIds];
+    const missing = allIds.find(id => !players.find(p => p.id === id));
+    if (missing) { showError('One of the players in that match no longer exists.'); return; }
 
-    me.rating = lastMatch.meBefore.rating;
-    me.matchesPlayed = lastMatch.meBefore.matchesPlayed;
-    opp.rating = lastMatch.oppBefore.rating;
-    opp.matchesPlayed = lastMatch.oppBefore.matchesPlayed;
+    allIds.forEach(id => {
+      const p = players.find(pl => pl.id === id);
+      p.rating = lastMatch.before[id].rating;
+      p.matchesPlayed = lastMatch.before[id].matchesPlayed;
+    });
     await savePlayers();
 
     document.getElementById('tr-result').classList.add('tr-hidden');
     clearError();
 
-    document.getElementById('tr-opponent-select').value = lastMatch.oppId;
+    matchType = lastMatch.matchType;
+    renderMatchTypeChips();
+    renderPlayerSelects();
+
+    if (matchType === 'singles') {
+      document.getElementById('tr-opponent-select').value = lastMatch.teamBIds[0];
+    } else {
+      document.getElementById('tr-partner-select').value = lastMatch.teamAIds[1];
+      document.getElementById('tr-opp1-select').value = lastMatch.teamBIds[0];
+      document.getElementById('tr-opp2-select').value = lastMatch.teamBIds[1];
+    }
+
     selectedFormat = lastMatch.format;
     renderFormatChips();
 
@@ -742,25 +840,33 @@
       btn.classList.add('tr-hidden');
       return;
     }
-    btn.textContent = `Edit last match — vs ${lastMatch.oppName}`;
+    btn.textContent = `Edit last match — ${lastMatch.label}`;
     btn.classList.remove('tr-hidden');
   }
 
-  function renderResult(me, opp, meDelta, oppDelta, winnerIsA, mult) {
+  function renderResult(teamAIds, teamBIds, perPlayerDeltaA, perPlayerDeltaB, winnerIsA, mult) {
     const box = document.getElementById('tr-result');
     const fmt = (d) => (d >= 0 ? `+${d}` : `${d}`);
+
+    const teamAPlayers = teamAIds.map(id => players.find(p => p.id === id));
+    const teamBPlayers = teamBIds.map(id => players.find(p => p.id === id));
+
+    const headline = winnerIsA
+      ? (teamAIds.length > 1 ? 'Your team won' : 'You won')
+      : (teamBIds.length > 1 ? 'Opponents won' : `${escapeHtml(teamBPlayers[0].name)} won`);
+
+    const rowsHtml = (teamPlayers, delta, isMe) => teamPlayers.map(p => `
+      <div class="tr-result-row">
+        <span class="tr-result-name">${p.id === ME_ID ? 'Me' : escapeHtml(p.name)}</span>
+        <span class="tr-rating-arrow">${p.rating - delta} → ${p.rating}</span>
+        <span class="tr-result-delta ${delta >= 0 ? 'tr-up' : 'tr-down'}">${fmt(delta)}</span>
+      </div>
+    `).join('');
+
     box.innerHTML = `
-      <p class="tr-eyebrow" style="margin-bottom:10px;">${winnerIsA ? 'You won' : escapeHtml(opp.name) + ' won'} · margin ×${mult.toFixed(2)}</p>
-      <div class="tr-result-row">
-        <span class="tr-result-name">Me</span>
-        <span class="tr-rating-arrow">${me.rating - meDelta} → ${me.rating}</span>
-        <span class="tr-result-delta ${meDelta >= 0 ? 'tr-up' : 'tr-down'}">${fmt(meDelta)}</span>
-      </div>
-      <div class="tr-result-row">
-        <span class="tr-result-name">${escapeHtml(opp.name)}</span>
-        <span class="tr-rating-arrow">${opp.rating - oppDelta} → ${opp.rating}</span>
-        <span class="tr-result-delta ${oppDelta >= 0 ? 'tr-up' : 'tr-down'}">${fmt(oppDelta)}</span>
-      </div>
+      <p class="tr-eyebrow" style="margin-bottom:10px;">${headline} · margin ×${mult.toFixed(2)}</p>
+      ${rowsHtml(teamAPlayers, perPlayerDeltaA)}
+      ${rowsHtml(teamBPlayers, perPlayerDeltaB)}
     `;
     box.classList.remove('tr-hidden');
   }
@@ -802,7 +908,7 @@
     lastMatch = null;
     saveLastMatch();
     renderEditLastLink();
-    renderOpponentSelect();
+    renderPlayerSelects();
     renderRankings();
   }
 
@@ -810,7 +916,8 @@
   async function init() {
     await loadPlayers();
     loadLastMatch();
-    renderOpponentSelect();
+    renderPlayerSelects();
+    renderMatchTypeChips();
     renderFormatChips();
     renderSetRows();
     renderRankings();
@@ -819,6 +926,12 @@
     document.getElementById('tr-add-opponent-btn').addEventListener('click', handleAddOpponent);
     document.getElementById('tr-new-opponent').addEventListener('keydown', (e) => {
       if (e.key === 'Enter') handleAddOpponent();
+    });
+    document.querySelectorAll('#tr-matchtype-chips .tr-chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        matchType = chip.dataset.matchtype;
+        renderMatchTypeChips();
+      });
     });
     document.getElementById('tr-add-set-btn').addEventListener('click', () => {
       const format = FORMATS[selectedFormat];
